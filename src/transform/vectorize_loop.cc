@@ -213,14 +213,16 @@ public:
 
   // Convenience entry to vectorize a loop body without exposing
   // the mutator invocation pattern at call sites.
-  static Stmt Vectorize(const Var &var, const PrimExpr &var_lanes, Stmt body, arith::Analyzer * analyzer) {
+  static Stmt Vectorize(const Var &var, const PrimExpr &var_lanes, Stmt body,
+                        arith::Analyzer *analyzer) {
     TLVectorizer vec{var, var_lanes, analyzer};
     Stmt original_body = body;
     auto vec_stmt = vec(std::move(body));
     return vec_stmt;
   }
 
-  TLVectorizer(const Var &var, const PrimExpr &var_lanes, arith::Analyzer * analyzer)
+  TLVectorizer(const Var &var, const PrimExpr &var_lanes,
+               arith::Analyzer *analyzer)
       : var_(var), var_lanes_(var_lanes), analyzer_(analyzer) {
     ramp_ = Ramp(IntImm(var->dtype, 0), IntImm(var->dtype, 1), var_lanes);
   }
@@ -329,9 +331,9 @@ public:
       int op_lanes = static_cast<int>(Downcast<IntImm>(op->lanes)->value);
       int base_ramp_lanes =
           static_cast<int>(Downcast<IntImm>(base_ramp->lanes)->value);
-      if (analyzer_->CanProve(base_ramp->stride ==
-                             stride *
-                                 make_const(stride.dtype(), base_ramp_lanes))) {
+      if (analyzer_->CanProve(
+              base_ramp->stride ==
+              stride * make_const(stride.dtype(), base_ramp_lanes))) {
         return Ramp(base_ramp->base, stride, op_lanes * base_ramp_lanes);
       }
     }
@@ -427,7 +429,7 @@ public:
     // if we can prove the condition is indifferent to the loop var,
     // we can substitute the var with 0 to simplify the condition
     PrimExpr cond_zeroed = Substitute(cond, {{var_, 0}});
-    if(analyzer_->CanProve(cond == cond_zeroed)) {
+    if (analyzer_->CanProve(cond == cond_zeroed)) {
       cond = cond_zeroed;
     }
     cond = this->VisitExpr(cond);
@@ -766,7 +768,7 @@ public:
 
 private:
   // analyzer
-  arith::Analyzer * analyzer_;
+  arith::Analyzer *analyzer_;
   // deep equal
   ExprDeepEqual deep_equal_;
   // variable to be replaced
@@ -867,7 +869,8 @@ inline bool TargetHasSVE() {
 
 class LoopVectorizer : public arith::IRMutatorWithAnalyzer {
 public:
-  LoopVectorizer(arith::Analyzer * analyzer) : arith::IRMutatorWithAnalyzer(analyzer) {}
+  LoopVectorizer(arith::Analyzer *analyzer)
+      : arith::IRMutatorWithAnalyzer(analyzer) {}
   Stmt VisitStmt_(const ForNode *op) final {
     if (op->kind == ForKind::kVectorized) {
       analyzer_->Bind(op->loop_var, Range::FromMinExtent(op->min, op->extent));
@@ -881,7 +884,8 @@ public:
             << " for target " << Target::Current();
       }
       ICHECK(is_zero(op->min));
-      return TLVectorizer::Vectorize(op->loop_var, op->extent, op->body, analyzer_);
+      return TLVectorizer::Vectorize(op->loop_var, op->extent, op->body,
+                                     analyzer_);
     } else {
       return StmtMutator::VisitStmt_(op);
     }
